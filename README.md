@@ -3,14 +3,16 @@
 > Decentralized, unstoppable polling powered by **Stellar Soroban Smart Contracts**. Every vote is immutable, transparent, and tamper-proof on-chain.
 
 [![CI/CD Pipeline](https://github.com/shritesh263/Nexsuspoll/actions/workflows/ci.yml/badge.svg)](https://github.com/shritesh263/Nexsuspoll/actions/workflows/ci.yml)
-[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://stellar-wallet-connect.vercel.app)
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://nexsuspoll.vercel.app)
 
 ## 🌐 Live Demo
-**🔗 [Click here to view live](https://stellar-wallet-connect.vercel.app)**
+**🔗 [Click here to view live](https://nexsuspoll.vercel.app)**
 
-<p align="center">
-  <img src="./media/SS-1.png" alt="NexusPoll Desktop Dashboard" width="800"/>
-</p>
+<div align="center">
+  <img src="./media/desktop.png" alt="NexusPoll Desktop Dashboard" width="800" style="margin-bottom: 15px;"/><br/><br/>
+  <i>Mobile Responsive Interface:</i><br/><br/>
+  <img src="./media/mobile.png" alt="NexusPoll Mobile View" width="280" style="border-radius: 12px; border: 1px solid rgba(0,245,196,0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.5);"/>
+</div>
 
 ---
 
