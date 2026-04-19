@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusPoll — On-Chain Governance for the Future</title>
+    <meta name="description" content="NexusPoll is a decentralized on-chain polling protocol powered by Stellar Soroban. Cast verifiable votes, create unstoppable governance polls, and explore real-time blockchain activity.">
+
+    <!-- Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stellar-sdk/11.3.0/stellar-sdk.min.js"></script>
+    <script src="https://unpkg.com/@albedo-link/intent/lib/albedo.intent.js"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Freighter API as ES Module -->
+    <script type="module">
+        try {
+            const mod = await import('https://esm.sh/@stellar/freighter-api@6.0.1');
+            const api = mod.default ?? mod;
+            window.freighterApi = {
+                isConnected:     api.isConnected,
+                requestAccess:   api.requestAccess,
+                getAddress:      api.getAddress,
+                signTransaction: api.signTransaction,
+                setAllowed:      api.setAllowed,
+                isAllowed:       api.isAllowed,
+                signAuthEntry:   api.signAuthEntry,
+            };
+            console.log('[NexusPoll] Freighter API v6.0.1 loaded:', window.freighterApi);
+        } catch(e) {
+            console.warn('[NexusPoll] Freighter API load failed:', e.message);
+        }
+    </script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Ambient Orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <!-- ─── Navbar ─────────────────────────── -->
+    <nav class="navbar">
+        <div class="logo">
+            <div class="logo-icon">⬡</div>
+            Nexus<span>Poll</span>
+        </div>
+        <div class="nav-right">
+            <div class="network-badge">
+                <div class="dot"></div>
+                Stellar Testnet
+            </div>
+            <button class="btn btn-albedo" id="connect-albedo-btn" onclick="connectWallet('albedo')">
+                <i class="ph ph-sun"></i> Albedo
+            </button>
+            <button class="btn btn-freighter" id="connect-btn" onclick="connectWallet('freighter')">
+                <i class="ph ph-rocket-launch"></i> Freighter
+            </button>
+        </div>
+    </nav>
+
+    <!-- ─── Hero ─────────────────────────────── -->
+    <header class="hero">
+        <div class="hero-label">
+            <i class="ph-fill ph-circle-wavy-check"></i>
+            Decentralized · Transparent · Unstoppable
+        </div>
+        <h1>On-Chain Governance<br>Redefined.</h1>
+        <p>Create verifiable polls secured by the Stellar Soroban smart contract engine. Every vote is immutable, transparent, and tamper-proof on-chain.</p>
+
+        <div class="stats-container">
+            <div class="stat-box">
+                <div class="stat-value" id="stat-polls">0</div>
+                <div class="stat-label">Total Polls</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="stat-votes">0</div>
+                <div class="stat-label">Votes Cast</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="stat-treasury">0</div>
+                <div class="stat-label">Treasury (XLM)</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="stat-trust">---</div>
+                <div class="stat-label">Trust Score</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ─── Main Layout ────────────────────── -->
+    <div class="container">
+
+        <!-- LEFT: Main Content -->
+        <div style="display:flex; flex-direction:column; gap:1.5rem;">
+
+            <!-- Create Poll Card -->
+            <div class="card">
+                <h2>
+                    <div class="card-icon" style="background:linear-gradient(135deg,rgba(0,245,196,0.15),rgba(0,245,196,0.05)); color:var(--primary);">
+                        <i class="ph-fill ph-plus-circle"></i>
+                    </div>
+                    Deploy a New Poll
+                </h2>
+                <form class="form-group" onsubmit="createPoll(event)">
+                    <div class="input-wrapper">
+                        <label class="input-label">Question</label>
+                        <input type="text" id="q" placeholder="What should the community decide on?" required autocomplete="off">
+                    </div>
+                    <div class="input-row">
+                        <div class="input-wrapper" style="flex:1; min-width:140px;">
+                            <label class="input-label">Option A</label>
+                            <input type="text" id="a" placeholder="First choice..." required autocomplete="off">
+                        </div>
+                        <div class="input-wrapper" style="flex:1; min-width:140px;">
+                            <label class="input-label">Option B</label>
+                            <input type="text" id="b" placeholder="Second choice..." required autocomplete="off">
+                        </div>
+                        <div class="input-wrapper" style="width:130px;">
+                            <label class="input-label">Duration (hrs)</label>
+                            <input type="number" id="h" placeholder="24" min="1" required autocomplete="off">
+                        </div>
+                    </div>
+                    <button type="submit" class="action-btn">
+                        <i class="ph-fill ph-broadcast"></i>
+                        Broadcast to Chain
+                    </button>
+                </form>
+            </div>
+
+            <!-- Active Polls -->
+            <div class="card">
+                <h2>
+                    <div class="card-icon" style="background:linear-gradient(135deg,rgba(255,180,0,0.15),rgba(255,180,0,0.05)); color:var(--accent2);">
+                        <i class="ph-fill ph-pulse"></i>
+                    </div>
+                    Live Governance Polls
+                </h2>
+                <div class="polls-grid" id="polls">
+                    <div class="empty-state">
+                        <i class="ph ph-ghost"></i>
+                        <p>No active polls found.<br>Be the first to deploy one!</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT: Sidebar -->
+        <div class="sidebar">
+
+            <!-- Wallet Dashboard -->
+            <div class="card wallet-card" id="wallet-dashboard-card">
+                <h2>
+                    <div class="card-icon" style="background:linear-gradient(135deg,rgba(0,245,196,0.15),rgba(0,245,196,0.05)); color:var(--primary);">
+                        <i class="ph-fill ph-wallet"></i>
+                    </div>
+                    Wallet Dashboard
+                </h2>
+                <div class="balance-display">
+                    <div class="balance-label">Native Balance</div>
+                    <div>
+                        <span class="balance-amount" id="wallet-balance">--</span>
+                        <span class="balance-unit">XLM</span>
+                    </div>
+                </div>
+                <div class="wallet-actions">
+                    <button class="action-btn secondary" onclick="fetchBalance()" style="font-size:0.8rem; padding:0.6rem 1rem;">
+                        <i class="ph ph-arrows-clockwise"></i> Refresh
+                    </button>
+                    <a href="https://laboratory.stellar.org/#account-creator?network=test" target="_blank"
+                       class="action-btn" style="font-size:0.8rem; padding:0.6rem 1rem; text-decoration:none; justify-content:center; flex:1;">
+                        <i class="ph ph-drop"></i> Fund
+                    </a>
+                </div>
+
+                <div class="divider"></div>
+
+                <form class="form-group" onsubmit="sendXLM(event)">
+                    <span class="send-form-label">Send XLM</span>
+                    <input type="text" id="send-dest" placeholder="Destination G-address..." required>
+                    <input type="number" id="send-amount" placeholder="Amount in XLM" step="0.1" min="0.1" required>
+                    <button type="submit" class="action-btn" style="width:100%; justify-content:center;">
+                        <i class="ph-fill ph-paper-plane-tilt"></i> Send Transaction
+                    </button>
+                </form>
+            </div>
+
+            <!-- Activity Feed -->
+            <div class="card">
+                <h2>
+                    <div class="card-icon" style="background:linear-gradient(135deg,rgba(123,47,255,0.15),rgba(123,47,255,0.05)); color:#a855f7;">
+                        <i class="ph-fill ph-activity"></i>
+                    </div>
+                    On-Chain Activity
+                </h2>
+                <div class="event-feed-panel" id="feed">
+                    <div style="display:flex; align-items:center; gap:0.6rem; justify-content:center; padding:2rem; color:var(--text-muted); font-size:0.875rem;">
+                        <i class="ph ph-spinner-gap" style="animation:spin 1s linear infinite; font-size:1.2rem;"></i>
+                        Waiting for wallet…
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- UI Overlays -->
+    <div id="tx-status" class="tx-bar"></div>
+    <div id="toast-container"></div>
+
+    <!-- Footer -->
+    <footer>
+        <p>© 2026 <strong>NexusPoll Protocol</strong> · Built on Stellar Soroban · All votes are immutable on-chain.</p>
+    </footer>
+
+    <!-- App Logic -->
+    <script src="app.js?v=6"></script>
+</body>
+</html>

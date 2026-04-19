@@ -1,0 +1,124 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  contract-tests:
+    name: Contract Unit Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
+      
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            contract/target/
+          key: ${{ runner.os }}-cargo-contract-${{ hashFiles('contract/Cargo.lock') }}
+      
+      - name: Run contract tests
+        working-directory: ./contract
+        run: |
+          cargo test --verbose
+          cargo test --release --verbose
+      
+      - name: Generate test report
+        if: always()
+        working-directory: ./contract
+        run: |
+          cargo test -- --nocapture > test_results.txt 2>&1 || true
+          cat test_results.txt
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: contract-test-results
+          path: contract/test_results.txt
+
+  wasm-tests:
+    name: WASM Utils Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
+      
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            wasm_utils/target/
+          key: ${{ runner.os }}-cargo-wasm-${{ hashFiles('wasm_utils/Cargo.lock') }}
+      
+      - name: Run WASM tests
+        working-directory: ./wasm_utils
+        run: cargo test --verbose
+      
+      - name: Build WASM module
+        working-directory: ./wasm_utils
+        run: |
+          cargo build --target wasm32-unknown-unknown --release
+          ls -lh target/wasm32-unknown-unknown/release/*.wasm
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [contract-tests, wasm-tests]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Validate HTML
+        run: |
+          echo "Validating HTML structure..."
+          grep -q "<!DOCTYPE html>" index.html
+          grep -q "ChainVote" index.html
+          echo "✓ HTML validation passed"
+      
+      - name: Check JavaScript syntax
+        run: |
+          echo "Checking JavaScript syntax..."
+          node -c app.js
+          echo "✓ JavaScript syntax valid"
+      
+      - name: Verify assets
+        run: |
+          echo "Verifying project assets..."
+          test -f style.css
+          test -f wasm_utils.wasm
+          test -f vercel.json
+          echo "✓ All assets present"
